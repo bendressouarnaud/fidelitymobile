@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "368439345338",
+    "project_id": "product-fidelite-ankk",
+    "storage_bucket": "product-fidelite-ankk.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:368439345338:android:229a6bebdc44313a018283",
+        "android_client_info": {
+          "package_name": "com.ankk.fidelite"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0CH9EzLijOA9a20DstIFuEy8oLL0C0Rw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
