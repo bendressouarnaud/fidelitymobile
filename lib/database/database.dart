@@ -71,11 +71,14 @@ class DatabaseHelper {
         'CREATE TABLE user (id INTEGER PRIMARY KEY,nom TEXT, prenom TEXT, email TEXT,numero TEXT,adresse TEXT,'
             'fcmtoken TEXT,pwd TEXT)');
     await db.execute(
-        'CREATE TABLE produit (id INTEGER PRIMARY KEY,libelle TEXT,prime INTEGER)');
+        'CREATE TABLE produit (id INTEGER PRIMARY KEY,libelle TEXT,prime INTEGER, numPolice TEXT, '
+            'dateSouscription INTEGER, echeance INTEGER, paye INTEGER)');
     await db.execute(
         'CREATE TABLE points (id INTEGER PRIMARY KEY AUTOINCREMENT,total INTEGER)');
     await db.execute(
         'CREATE TABLE calendrierpaiement (id INTEGER PRIMARY KEY, produitId INTEGER,montant INTEGER,'
             'mois INTEGER,annee INTEGER, paiementEffectue INTEGER)');
+    await db.execute(
+        'CREATE TABLE historique (id INTEGER PRIMARY KEY, contenu TEXT,temps INTEGER)');
   }
 }

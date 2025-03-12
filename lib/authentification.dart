@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:fidelite/main.dart';
+import 'package:fidelite/models/historique.dart';
 import 'package:fidelite/models/produit.dart';
 import 'package:fidelite/repositories/calendrierpaiement_repository.dart';
+import 'package:fidelite/repositories/historique_repository.dart';
 import 'package:fidelite/repositories/points_repository.dart';
 import 'package:fidelite/repositories/produit_repository.dart';
 import 'package:fidelite/repositories/user_repository.dart';
@@ -16,6 +18,7 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:http/http.dart';
 import 'beans/authenticateresponse.dart';
+import 'beans/produitbeanDTO.dart';
 import 'models/calendrierpaiement.dart';
 import 'models/points.dart';
 import 'models/user.dart';
@@ -49,6 +52,7 @@ class _NewAuth extends State<AuthentificationEcran> {
   final lesGenres = ["M", "F"];
   final _userRepository = UserRepository();
   final _produitRepository = ProduitRepository();
+  final _historiqueRepository = HistoriqueRepository();
   final _calendrierRepository = CalendrierPaiementRepository();
   final _pointsRepository = PointsRepository();
   late BuildContext dialogContext;
@@ -123,34 +127,38 @@ class _NewAuth extends State<AuthentificationEcran> {
         await _userRepository.insertUser(user);
 
         // From there, Hit NEW PRODUIT :
-        for(Produit pt in bn.produits){
+        for(ProduitbeanDTO pt in bn.produits){
           try {
             Produit produit = Produit(id: pt.id,
                 libelle: pt.libelle,
-                prime: pt.prime);
+                prime: pt.prime,
+            dateSouscription: pt.dateSouscription,
+            echeance: pt.echeance,
+            numPolice: pt.numPolice,
+            paye: 0);
             await _produitRepository.insert(produit);
           }
           catch (e) {
-            print('Erreur : ${e.toString()}');
+            print('Erreur INSERTING ProduitbeanDTO : ${e.toString()}');
           }
-        }
-        // Persist PUBLICATION
-        for(CalendrierPaiement cr in bn.calendriers){
-          // First SPLIT :
-          CalendrierPaiement ct = CalendrierPaiement(
-              id: cr.id,
-              produitId: cr.produitId,
-              annee: cr.annee,
-              mois: cr.mois,
-              montant: cr.montant,
-              paiementEffectue: cr.paiementEffectue
-          );
-          await _calendrierRepository.insert(ct);
         }
 
         // Init the TABLE
         Points point = Points(id: 1, total: 0);
         await _pointsRepository.insert(point);
+
+        // For historique :
+        for(Historique he in bn.historiques){
+          try {
+            Historique historique = Historique(id: he.id,
+                contenu: he.contenu,
+                temps: he.temps);
+            await _historiqueRepository.insert(historique);
+          }
+          catch (e) {
+            print('Erreur INSERTING Historique : ${e.toString()}');
+          }
+        }
 
         // Set FLAG :
         closeAlertDialog = false;
@@ -344,6 +352,9 @@ class _NewAuth extends State<AuthentificationEcran> {
                                   if(!flagSendData){
                                     Navigator.pop(dialogContext);
                                     timer.cancel();
+
+                                    //
+                                    Navigator.pop(context);
 
                                     if(!closeAlertDialog) {
                                       Navigator
