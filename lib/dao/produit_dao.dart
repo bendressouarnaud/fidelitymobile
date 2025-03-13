@@ -29,6 +29,15 @@ class ProduitDao {
     return liste.first;
   }
 
+  Future<Produit> findByNumpolice(String numPolice) async {
+    final db = await dbProvider.database;
+    var data = await db.query('produit', where: 'numPolice = ?', whereArgs: [numPolice]);
+    List<Produit> liste = data.isNotEmpty
+        ? data.map((c) => Produit.fromDatabaseJson(c)).toList()
+        : [];
+    return liste.first;
+  }
+
   Future<List<Produit>> findAll() async {
     final db = await dbProvider.database;
     var results = await db.query('produit');

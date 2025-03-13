@@ -1,11 +1,18 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:fidelite/echeancepaiement.dart';
 import 'package:fidelite/models/produit.dart';
 import 'package:fidelite/reglerpolice.dart';
 import 'package:fidelite/repositories/produit_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart';
 import 'package:money_formatter/money_formatter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'beans/hubwaveresponseshort.dart';
 import 'objets/constants.dart';
 
 class Polices extends StatefulWidget {
@@ -17,18 +24,32 @@ class Polices extends StatefulWidget {
 }
 
 class _HPolices extends State<Polices> {
-  // ATTRIBUTES :
+  // A T T R I B U T E S  :
   final _repository = ProduitRepository();
   List<Produit> lesProduits = [];
+  late BuildContext dialogContext;
+  bool flagSendData = false;
+  String numPolice = '';
+  bool flagLoadingPayment = false;
+  bool closeAlertDialog = false;
+  bool hitServerAfterUrlPayment = false;
 
 
-
-
+  // M E T H O D S :
   @override
   void initState() {
     //
     super.initState();
   }
+
+  // Listen to the app lifecycle state changes
+  /*void _onStateChanged(AppLifecycleState state) {
+    if(state == AppLifecycleState.resumed && hitServerAfterUrlPayment){
+      // Check on SERVER :
+      hitServerAfterUrlPayment = false;
+      displayLoadingInterface(context);
+    }
+  }*/
 
   // Init Objects :
   Future<List<Produit>> initObjects() async {
@@ -62,6 +83,106 @@ class _HPolices extends State<Polices> {
     );
     return fmf.output.withoutFractionDigits;
   }
+
+  // Requesting to get WAVE URL :
+  void loadingWavePayment(BuildContext dContext){
+    showDialog(
+        barrierDismissible: false,
+        context: dContext,
+        builder: (BuildContext context) {
+          dialogContext = context;
+          return PopScope(
+            canPop: false,
+            child: AlertDialog(
+                title: const Text('Synchonisation'),
+                content: Container(
+                    height: 100,
+                    child: const Column(
+                      children: [
+                        Text("Chargement moyen de paiement ..."),
+                        SizedBox(
+                          height: 20,
+                        ),
+                        SizedBox(
+                            height: 30.0,
+                            width: 30.0,
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                              strokeWidth: 3.0, // Width of the circular line
+                            )
+                        )
+                      ],
+                    )
+                )
+            ),
+          );
+        }
+    );
+
+    flagLoadingPayment = true;
+    callWaveApi();
+
+    // Run TIMER :
+    Timer.periodic(
+      const Duration(milliseconds: 1000),
+          (timer) {
+        // Update user about remaining time
+        if(!flagLoadingPayment){
+          Navigator.pop(dialogContext);
+          timer.cancel();
+        }
+      },
+    );
+  }
+
+
+  Future<void> callWaveApi() async {
+    final url = Uri.parse('${dotenv.env['URL']}generatewaveid');
+    var response = await post(url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "amount": '100',
+          "currency": 'XOF',
+          "error_url": 'https://example.com/error',
+          "success_url": 'https://example.com/success',
+          "numPolice": numPolice
+        })).timeout(const Duration(seconds: timeOutValue));;
+
+    // Checks :
+    flagLoadingPayment = false;
+    if(response.statusCode == 200){
+      HubWaveResponseShort hubWaveResponse = HubWaveResponseShort.fromJson(json.decode(response.body));
+      if(hubWaveResponse.id.isNotEmpty) {
+        // Open link
+        final Uri url = Uri.parse(hubWaveResponse.wave_launch_url);
+        if (!await launchUrl(url)) {
+          //throw Exception('Could not launch $_url');
+        }
+        else{
+          //
+          hitServerAfterUrlPayment = true;
+        }
+      }
+      else if(hubWaveResponse.reserve > 0){
+        displayMessage('Impossible de réserver plus ${hubWaveResponse.reserve} Kg', 5);
+      }
+    }
+    else{
+      displayMessage('Une erreur est survenue', 3);
+    }
+  }
+
+  // Display SNACK
+  void displayMessage(String message, int delay){
+    // Display SNACKBAR :
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          duration: Duration(seconds: delay),
+          content: Text(message)
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -180,10 +301,7 @@ class _HPolices extends State<Polices> {
                           itemBuilder: (BuildContext context, int index) {
                             return GestureDetector(
                                 onTap: () {
-                                  Navigator.push(context,
-                                      MaterialPageRoute(builder: (context) {
-                                        return Echeancepaiement(iDProduit: lesProduits[index].id, libProduit: lesProduits[index].libelle);
-                                      }));
+                                  loadingWavePayment(context);
                                 },
                                 child: Container(
                                   margin: const EdgeInsets.only(right: 10, left: 10, top: 5),
