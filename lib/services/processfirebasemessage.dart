@@ -62,6 +62,14 @@ class ProcessFirebaseMessage {
         paye: 1);
     await _produitRepository.update(produitToTupdate);
 
+    // For historique :
+    List<Historique> lesHistoriques = await _historiqueRepository.findAll();
+    Historique historique = Historique(
+        id: lesHistoriques.length + 1,
+        contenu: 'Paiement effectué pour la police ${produit.libelle}',
+        temps: int.parse(message.data['temps']));
+    await _historiqueRepository.insert(historique);
+
     // Display message :
     Fluttertoast.showToast(
         msg: "Paiement effectué pour la police ${produit.libelle}",
